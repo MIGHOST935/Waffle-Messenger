@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ВафляМессенджер</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="app">
+
+  <!-- AUTH -->
+  <div id="auth" class="auth">
+    <div class="authCard">
+      <div class="authHeader">
+        <div class="brand">ВафляМессенджер</div>
+        <div id="authTitle" class="authTitle">Вход</div>
+        <div class="authSlogan">Ловит даже на парковке</div>
+      </div>
+
+      <!-- Step 1: Phone -->
+      <div id="stepPhone" class="authStep">
+        <div class="authStepBody">
+          <label class="field">
+            <span>Телефон</span>
+            <input id="phone" inputmode="tel" autocomplete="tel" placeholder="+7" />
+          </label>
+          <div id="phoneError" class="error"></div>
+          <button id="nextPhone" class="btn primary wide" type="button">Далее</button>
+          <button id="switchMode" class="link" type="button">Нету аккаунта? Зарегистрироваться</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Profile info (register only) -->
+      <div id="stepProfile" class="authStep hidden">
+        <div class="authStepBody">
+          <div class="regAvatarSection">
+            <div id="regAvatarPreview" class="bigAvatar regAvPreview"></div>
+            <div class="regAvatarRight">
+              <label class="btn small regUploadLabel">
+                Загрузить фото
+                <input id="regPhotoInput" type="file" accept="image/*" style="display:none">
+              </label>
+              <div class="avatarGrid regAvGrid">
+                <button class="avatar regAvBtn" type="button" data-avatar="a1"></button>
+                <button class="avatar regAvBtn" type="button" data-avatar="a2"></button>
+                <button class="avatar regAvBtn" type="button" data-avatar="a3"></button>
+                <button class="avatar regAvBtn" type="button" data-avatar="a4"></button>
+                <button class="avatar regAvBtn" type="button" data-avatar="a5"></button>
+                <button class="avatar regAvBtn" type="button" data-avatar="a6"></button>
+              </div>
+            </div>
+          </div>
+          <div class="grid2">
+            <label class="field"><span>Имя *</span><input id="name" autocomplete="given-name" placeholder="Имя" /></label>
+            <label class="field"><span>Фамилия</span><input id="lastName" autocomplete="family-name" placeholder="Необязательно" /></label>
+          </div>
+          <label class="field">
+            <span>Юзернейм *</span>
+            <input id="regUsername" autocomplete="username" placeholder="example_user" />
+            <div class="hint">Латиница, цифры, _. 4–24 символа.</div>
+          </label>
+          <div id="profileStepError" class="error"></div>
+          <button id="nextProfile" class="btn primary wide" type="button">Далее</button>
+          <button id="backToPhone" class="link" type="button">← Назад</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Code -->
+      <div id="stepCode" class="authStep hidden">
+        <form id="authForm" class="authStepBody">
+          <div class="authRow">
+            <button id="requestCode" class="btn" type="button">Получить код</button>
+            <div id="codeHint" class="hint"></div>
+          </div>
+          <label class="field">
+            <span>Код</span>
+            <input id="code" inputmode="numeric" autocomplete="one-time-code" placeholder="6 цифр" />
+          </label>
+          <div id="authError" class="error"></div>
+          <button id="verify" class="btn primary wide" type="submit">Продолжить</button>
+          <button id="backFromCode" class="link" type="button">← Назад</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div id="chat" class="chat hidden">
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebarTop">
+        <div class="sidebarBrand">
+          <div class="brandMini">ВафляМессенджер</div>
+          <button id="logout" class="ghost small" type="button">Выйти</button>
+        </div>
+        <div class="meLine" id="meLineBtn" style="cursor:pointer" title="Редактировать профиль">
+          <div id="meAvatar" class="miniAvatar"></div>
+          <div class="meText">
+            <div id="meName" class="meName"></div>
+            <div id="who" class="who"></div>
+          </div>
+        </div>
+        <div class="searchWrap">
+          <div class="searchRow">
+            <input id="userSearch" class="search" placeholder="Поиск по @username" autocomplete="off" />
+            <div class="addBtnWrap">
+              <button id="addBtn" class="btn small" type="button" title="Добавить">+</button>
+              <div id="addDrop" class="addDrop hidden">
+                <div id="addContactBtn" class="addDropItem">👤 Создать контакт</div>
+                <div id="addGroupBtn" class="addDropItem">👥 Создать группу</div>
+              </div>
+            </div>
+          </div>
+          <div id="searchResults" class="searchDrop hidden"></div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button id="tabChats" class="tab active" type="button">Чаты</button>
+        <button id="tabContacts" class="tab" type="button">Контакты</button>
+      </div>
+      <ul id="contacts" class="contacts"></ul>
+    </aside>
+
+    <section class="dialog">
+      <header class="dialogTop">
+        <button id="back" class="ghost back hidden" type="button">‹</button>
+        <div class="peer" id="peerInfoBtn">
+          <div id="peerAvatar" class="miniAvatar"></div>
+          <div>
+            <div id="peerName" class="peerName">Выберите контакт</div>
+            <div id="peerUsername" class="peerSub"></div>
+          </div>
+        </div>
+        <div class="dialogActions">
+          <button id="addPeerToContacts" class="btn small hidden" type="button">+ контакт</button>
+          <button id="chatMenuBtn" class="ghost hidden" type="button">⋯</button>
+        </div>
+      </header>
+
+      <div id="chatMenu" class="dropMenu hidden">
+        <button id="deleteForMeBtn" class="menuItem" type="button">Удалить чат у себя</button>
+        <button id="deleteForAllBtn" class="menuItem danger" type="button">Удалить чат у всех</button>
+      </div>
+
+      <ul id="messages" class="messages"></ul>
+
+      <div id="attachPreview" class="attachPreview hidden"></div>
+
+      <form id="form" class="composer">
+        <label class="attachBtn" title="Прикрепить файл">
+          <input id="fileInput" type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" style="display:none">
+          📎
+        </label>
+        <input id="input" autocomplete="off" placeholder="Написать сообщение…" />
+        <button id="send" type="submit">➤</button>
+      </form>
+
+      <!-- Peer profile slide panel (DM) -->
+      <div id="peerPanel" class="peerPanel">
+        <div class="ppHeader">
+          <button id="peerPanelBack" class="ppBackBtn" type="button">← Назад</button>
+        </div>
+        <div class="ppHero">
+          <div id="ppAvatar" class="ppAvatar"></div>
+          <div id="ppName" class="ppName"></div>
+          <div id="ppInfo" class="ppInfo"></div>
+        </div>
+        <div class="ppTabs">
+          <button class="ppTab active" data-tab="media">Медиа</button>
+          <button class="ppTab" data-tab="links">Ссылки</button>
+          <button class="ppTab" data-tab="groups">Группы</button>
+        </div>
+        <div id="ppContent" class="ppContent"></div>
+        <div class="ppActions">
+          <button id="ppEditContact" class="ppActionBtn" type="button">Изменить контакт</button>
+          <button id="ppDeleteContact" class="ppActionBtn" type="button">Удалить контакт</button>
+          <button id="ppBlock" class="ppActionBtn ppActionDanger" type="button">Заблокировать</button>
+        </div>
+      </div>
+
+      <!-- Group profile slide panel -->
+      <div id="groupPanel" class="peerPanel">
+        <div class="ppHeader gpHeaderRow">
+          <button id="groupPanelBack" class="ppBackBtn" type="button">← Назад</button>
+          <button id="groupSettingsBtn" class="ppBackBtn ppSettingsBtn hidden" type="button">Настройки ⚙</button>
+        </div>
+        <div class="ppHero">
+          <div id="gpAvatar" class="ppAvatar"></div>
+          <div id="gpName" class="ppName"></div>
+          <div id="gpDesc" class="ppInfo"></div>
+        </div>
+        <div class="ppTabs">
+          <button class="gpTab active" data-tab="members">Участники</button>
+          <button class="gpTab" data-tab="media">Медиа</button>
+          <button class="gpTab" data-tab="links">Ссылки</button>
+        </div>
+        <div id="gpContent" class="ppContent"></div>
+        <div class="ppActions" id="gpActions">
+          <button id="gpClearMe" class="ppActionBtn" type="button">Очистить сообщения для меня</button>
+          <button id="gpClearAll" class="ppActionBtn ppActionDanger hidden" type="button">Очистить сообщения для всех</button>
+          <button id="gpLeave" class="ppActionBtn ppActionDanger" type="button">Покинуть группу</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- MSG CONTEXT MENU -->
+  <div id="msgMenu" class="dropMenu hidden" style="position:fixed;z-index:200">
+    <div class="reactionBar">
+      <button class="reactionBtn" data-emoji="👍" type="button">👍</button>
+      <button class="reactionBtn" data-emoji="👎" type="button">👎</button>
+      <button class="reactionBtn" data-emoji="❤️" type="button">❤️</button>
+      <button class="reactionBtn" data-emoji="😂" type="button">😂</button>
+      <button class="reactionBtn" data-emoji="😮" type="button">😮</button>
+      <button class="reactionBtn" data-emoji="😢" type="button">😢</button>
+      <button class="reactionBtn" data-emoji="🔥" type="button">🔥</button>
+    </div>
+    <div class="menuDivider"></div>
+    <button id="msgDeleteMe" class="menuItem" type="button">Удалить у себя</button>
+    <button id="msgDeleteAll" class="menuItem danger hidden" type="button">Удалить у всех</button>
+  </div>
+
+  <!-- PROFILE MODAL -->
+  <div id="profileModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalTitle">Мой профиль</div>
+      <div class="profileCenter">
+        <div id="profileAvatarPreview" class="bigAvatar" style="cursor:pointer"></div>
+        <label class="btn small" style="cursor:pointer;text-align:center">
+          Загрузить фото
+          <input id="profilePhotoInput" type="file" accept="image/*" style="display:none">
+        </label>
+        <div class="avatarGrid" style="margin-top:6px">
+          <button class="avatar profAv" type="button" data-avatar="a1"></button>
+          <button class="avatar profAv" type="button" data-avatar="a2"></button>
+          <button class="avatar profAv" type="button" data-avatar="a3"></button>
+          <button class="avatar profAv" type="button" data-avatar="a4"></button>
+          <button class="avatar profAv" type="button" data-avatar="a5"></button>
+          <button class="avatar profAv" type="button" data-avatar="a6"></button>
+        </div>
+      </div>
+      <form id="profileForm" class="modalForm">
+        <div class="grid2">
+          <label class="field"><span>Имя</span><input id="profileName" /></label>
+          <label class="field"><span>Фамилия</span><input id="profileLastName" /></label>
+        </div>
+        <label class="field"><span>Юзернейм</span><input id="profileUsername" /></label>
+        <label class="field"><span>Телефон</span><input id="profilePhone" inputmode="tel" /></label>
+        <div id="profileError" class="error"></div>
+        <div class="modalActions">
+          <button id="profileCancel" class="btn" type="button">Отмена</button>
+          <button class="btn primary" type="submit">Сохранить</button>
+        </div>
+      </form>
+    </div>
+    <button id="profileBackdrop" class="modalBackdrop" type="button"></button>
+  </div>
+
+  <!-- GROUP CREATION MODAL -->
+  <div id="groupModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalTitle">Новая группа</div>
+      <div class="profileCenter" style="margin:12px 0">
+        <div id="groupAvatarPreview" class="bigAvatar groupAvPreview"></div>
+        <label class="btn small" style="cursor:pointer;text-align:center">
+          Загрузить фото
+          <input id="groupPhotoInput" type="file" accept="image/*" style="display:none">
+        </label>
+      </div>
+      <form id="groupForm" class="modalForm">
+        <label class="field"><span>Название *</span><input id="groupName" placeholder="Название группы" /></label>
+        <label class="field"><span>Описание</span><input id="groupDesc" placeholder="Необязательно" /></label>
+        <div class="field">
+          <span>Добавить участников</span>
+          <div id="groupMembersList" class="groupMembersList"></div>
+        </div>
+        <div id="groupError" class="error"></div>
+        <div class="modalActions">
+          <button id="groupCancel" class="btn" type="button">Отмена</button>
+          <button class="btn primary" type="submit">Создать</button>
+        </div>
+      </form>
+    </div>
+    <button id="groupBackdrop" class="modalBackdrop" type="button"></button>
+  </div>
+
+  <!-- CONTACT MODAL -->
+  <div id="contactModal" class="modal hidden">
+    <div class="modalCard">
+      <div id="contactModalTitle" class="modalTitle">Добавить контакт</div>
+      <div id="contactModalDesc" class="modalDesc">Контакт добавится, если номер зарегистрирован.</div>
+      <form id="contactForm" class="modalForm">
+        <div class="grid2">
+          <label class="field"><span>Имя</span><input id="contactFirst" autocomplete="given-name" placeholder="Имя" /></label>
+          <label class="field"><span>Фамилия</span><input id="contactLast" autocomplete="family-name" placeholder="Фамилия" /></label>
+        </div>
+        <label class="field"><span>Телефон</span><input id="contactPhone" inputmode="tel" autocomplete="tel" placeholder="+7 999 123-45-67" /></label>
+        <div id="contactError" class="error"></div>
+        <div class="modalActions">
+          <button id="contactCancel" class="btn" type="button">Отмена</button>
+          <button id="contactSubmit" class="btn primary" type="submit">Добавить</button>
+        </div>
+      </form>
+    </div>
+    <button id="contactBackdrop" class="modalBackdrop" type="button"></button>
+  </div>
+
+  <!-- GROUP SETTINGS MODAL -->
+  <div id="groupSettingsModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalTitle">Настройки группы</div>
+      <div class="profileCenter" style="margin:12px 0">
+        <div id="gsAvatarPreview" class="bigAvatar groupAvPreview"></div>
+        <label class="btn small" style="cursor:pointer;text-align:center">
+          Изменить фото
+          <input id="gsPhotoInput" type="file" accept="image/*" style="display:none">
+        </label>
+      </div>
+      <form id="gsForm" class="modalForm">
+        <label class="field"><span>Название</span><input id="gsName" placeholder="Название группы" /></label>
+        <label class="field"><span>Описание</span><input id="gsDesc" placeholder="Описание" /></label>
+        <div id="gsError" class="error"></div>
+        <button id="gsAdminBtn" class="btn hidden" type="button" style="margin-top:4px;text-align:left">👑 Назначение администраторов</button>
+        <div class="modalActions">
+          <button id="gsCancel" class="btn" type="button">Отмена</button>
+          <button class="btn primary" type="submit">Сохранить</button>
+        </div>
+      </form>
+    </div>
+    <button id="gsBackdrop" class="modalBackdrop" type="button"></button>
+  </div>
+
+  <!-- ADD MEMBERS MODAL -->
+  <div id="addMembersModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalTitle">Добавление участников</div>
+      <div class="field" style="margin-top:14px">
+        <div id="addMembersList" class="groupMembersList" style="max-height:300px"></div>
+      </div>
+      <div class="modalActions" style="margin-top:14px">
+        <button id="addMembersCancel" class="btn" type="button">Отмена</button>
+        <button id="addMembersApply" class="btn primary" type="button">Применить</button>
+      </div>
+    </div>
+    <button id="addMembersBackdrop" class="modalBackdrop" type="button"></button>
+  </div>
+
+  <!-- ADMIN ASSIGNMENT MODAL -->
+  <div id="adminModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalTitle">Назначение администраторов</div>
+      <div class="modalDesc">Отметьте участников, которых хотите назначить администраторами.</div>
+      <div class="field" style="margin-top:14px">
+        <div id="adminMembersList" class="groupMembersList" style="max-height:300px"></div>
+      </div>
+      <div class="modalActions" style="margin-top:14px">
+        <button id="adminCancel" class="btn" type="button">Отмена</button>
+        <button id="adminApply" class="btn primary" type="button">Применить</button>
+      </div>
+    </div>
+    <button id="adminBackdrop" class="modalBackdrop" type="button"></button>
+  </div>
+
+  <!-- CONFIRM MODAL -->
+  <div id="confirmModal" class="modal hidden">
+    <div class="modalCard" style="max-width:380px">
+      <div id="confirmTitle" class="modalTitle" style="font-size:17px"></div>
+      <div id="confirmText" class="modalDesc" style="margin-top:10px;font-size:14px;line-height:1.5"></div>
+      <div class="modalActions" style="margin-top:20px">
+        <button id="confirmCancel" class="btn" type="button">Отмена</button>
+        <button id="confirmOk" class="btn danger" type="button">Подтвердить</button>
+      </div>
+    </div>
+    <button id="confirmBackdrop" class="modalBackdrop" type="button"></button>
+  </div>
+
+</main>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/client.js"></script>
+</body>
+</html>
