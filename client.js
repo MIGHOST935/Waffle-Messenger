@@ -990,7 +990,22 @@ async function openGroupPanel(groupId) {
   $('groupSettingsBtn').classList.toggle('hidden', !canManage);
   $('gpClearAll').classList.toggle('hidden', !canManage);
   // Owner can leave
-  $('gpLeave').classList.toggle('hidden', false);
+    const leaveBtn = $('gpLeave');
+  // Всегда показываем кнопку
+  leaveBtn.classList.remove('hidden');
+
+  // Проверяем: если пользователь — владелец и в группе есть еще участники (> 1)
+  if (r.myRole === 'owner' && r.members && r.members.length > 1) {
+    leaveBtn.disabled = true;
+    leaveBtn.style.opacity = '0.5'; // "Глушим" кнопку (делаем полупрозрачной)
+    leaveBtn.style.cursor = 'not-allowed';
+    leaveBtn.title = 'Вы не можете покинуть группу, пока в ней есть участники';
+  } else {
+    leaveBtn.disabled = false;
+    leaveBtn.style.opacity = '';
+    leaveBtn.style.cursor = '';
+    leaveBtn.title = '';
+  }
 
   document.querySelectorAll('.gpTab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'members'));
   renderGroupTab('members');
