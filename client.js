@@ -989,8 +989,8 @@ async function openGroupPanel(groupId) {
   const canManage = r.myRole === 'owner' || r.myRole === 'admin';
   $('groupSettingsBtn').classList.toggle('hidden', !canManage);
   $('gpClearAll').classList.toggle('hidden', !canManage);
-  // Owner cannot leave
-  $('gpLeave').classList.toggle('hidden', r.myRole === 'owner');
+  // Owner can leave
+  $('gpLeave').classList.toggle('hidden', false);
 
   document.querySelectorAll('.gpTab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'members'));
   renderGroupTab('members');
