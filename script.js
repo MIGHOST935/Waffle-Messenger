@@ -487,15 +487,31 @@ app.post('/api/groups/:id/leave', requireAuth, (req, res) => {
   const groupId = Number(req.params.id);
   const member = getGroupMember(groupId, req.user.id);
   if (!member) return res.status(403).json({ ok:false, error:'not_member' });
-  if (member.role === 'owner') return res.status(400).json({ ok:false, error:'owner_cannot_leave' });
+
+  // ПОЛУЧАЕМ СПИСОК ВСЕХ УЧАСТНИКОВ
+  const currentMembers = listGroupMembers(groupId);
+
+  // ИЗМЕНЕННОЕ УСЛОВИЕ: Блокируем только если владелец пытается выйти, а в группе есть кто-то еще
+  if (member.role === 'owner' && currentMembers.length > 1) {
+      return res.status(400).json({ ok:false, error:'owner_cannot_leave' });
+  }
+
   const me = req.user;
   removeGroupMember(groupId, me.id);
-  const sysmsg = sendGroupSystemMessage(groupId, sysMsgText(me, 'покинул(а) группу'));
+
+  // Если это был последний участник, remaining будет пустым массивом,
+  // поэтому системное сообщение отправлять уже некому.
   const remaining = listGroupMembers(groupId);
-  for (const m of remaining) io.to(`user:${m.id}`).emit('group:new', { ...sysmsg, groupId });
+
+  if (remaining.length > 0) {
+      const sysmsg = sendGroupSystemMessage(groupId, sysMsgText(me, 'покинул(а) группу'));
+      for (const m of remaining) io.to(`user:${m.id}`).emit('group:new', { ...sysmsg, groupId });
+  }
+
   io.to(`user:${me.id}`).emit('group:left', { groupId });
   return res.json({ ok:true });
 });
+
 
 app.post('/api/groups/:id/clear-me', requireAuth, (req, res) => {
   const groupId = Number(req.params.id);
