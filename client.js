@@ -17,6 +17,23 @@ const AVATARS = {
   a5:'linear-gradient(135deg,#eab308,#22c55e)',
   a6:'linear-gradient(135deg,#06b6d4,#3b82f6)',
 };
+function toggleMessageInput(disabled, text = "Выберите контакт, чтобы начать...") {
+  // Замените 'messageInput' на ID вашего поля ввода сообщений, если он отличается
+  const msgInput = $('messageInput'); 
+  if (!msgInput) return;
+
+  msgInput.disabled = disabled;
+
+  if (disabled) {
+    msgInput.style.opacity = '0.5';
+    msgInput.style.cursor = 'not-allowed';
+    msgInput.placeholder = text;
+  } else {
+    msgInput.style.opacity = '';
+    msgInput.style.cursor = '';
+    msgInput.placeholder = 'Введите сообщение...';
+  }
+}
 function applyAvatar(el, avatar) {
   if (!el) return;
   el.style.backgroundImage = '';
@@ -871,26 +888,30 @@ $('addGroupBtn').addEventListener('click', () => {
 });
 
 /* ── Peer profile panel (DM) ── */
-function closePeerPanel() { peerPanelEl.classList.remove('open'); state.peerPanelData=null; }
+function closePeerPanel() { 
+  peerPanelEl.classList.remove('open'); 
+  state.peerPanelData=null; 
+  toggleMessageInput(true, "Выберите контакт, чтобы начать..."); // <-- Добавьте эту строку
+}
 
 async function openPeerPanel(username) {
   if (!username) return;
   // Close group panel if open
   closeGroupPanel();
   peerPanelEl.classList.add('open');
-  const r=await apiGet('/api/profile/'+username);
+  const r = await apiGet('/api/profile/'+username);
   if (!r.ok) return;
-  state.peerPanelData=r;
-  state.peerPanelTab='media';
+  state.peerPanelData = r;
+  state.peerPanelTab = 'media';
   applyAvatar(ppAvatarEl, r.user.avatar);
-  const contact=state.contacts.find(c=>c.userId===r.user.id);
-  ppNameEl.textContent=contact?.nickname||displayName(r.user);
-  const lines=[];
+  const contact = state.contacts.find(c => c.userId === r.user.id);
+  ppNameEl.textContent = contact?.nickname || displayName(r.user);
+  const lines = [];
   if (r.user.phone) lines.push(r.user.phone);
   if (r.user.username) lines.push('@'+r.user.username);
-  ppInfoEl.innerHTML=lines.map(escHtml).join('<br>');
-  $('ppBlock').textContent=r.blockedByMe?'Разблокировать':'Заблокировать';
-  document.querySelectorAll('.ppTab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='media'));
+  ppInfoEl.innerHTML = lines.map(escHtml).join('<br>');
+  $('ppBlock').textContent = r.blockedByMe ? 'Разблокировать' : 'Заблокировать';
+  document.querySelectorAll('.ppTab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'media'));
   renderPeerTab('media');
 }
 
@@ -972,7 +993,11 @@ $('ppBlock').addEventListener('click', async()=>{
 });
 
 /* ── Group profile panel ── */
-function closeGroupPanel() { groupPanelEl.classList.remove('open'); state.groupPanelData=null; }
+function closeGroupPanel() { 
+  groupPanelEl.classList.remove('open'); 
+  state.groupPanelData=null; 
+  toggleMessageInput(true, "Выберите контакт, чтобы начать..."); 
+}
 
 async function openGroupPanel(groupId) {
   closePeerPanel();
@@ -989,23 +1014,16 @@ async function openGroupPanel(groupId) {
   const canManage = r.myRole === 'owner' || r.myRole === 'admin';
   $('groupSettingsBtn').classList.toggle('hidden', !canManage);
   $('gpClearAll').classList.toggle('hidden', !canManage);
-  // Owner can leave
-    const leaveBtn = $('gpLeave');
-  // Всегда показываем кнопку
+
+  const leaveBtn = $('gpLeave');
   leaveBtn.classList.remove('hidden');
 
   // Проверяем: если пользователь — владелец и в группе есть еще участники (> 1)
-  if (r.myRole === 'owner' && r.members && r.members.length > 1) {
-    leaveBtn.disabled = true;
-    leaveBtn.style.opacity = '0.5'; // "Глушим" кнопку (делаем полупрозрачной)
-    leaveBtn.style.cursor = 'not-allowed';
-    leaveBtn.title = 'Вы не можете покинуть группу, пока в ней есть участники';
-  } else {
-    leaveBtn.disabled = false;
-    leaveBtn.style.opacity = '';
-    leaveBtn.style.cursor = '';
-    leaveBtn.title = '';
-  }
+  const isOwnerCantLeave = r.myRole === 'owner' && r.members && r.members.length > 1;
+
+  leaveBtn.disabled = isOwnerCantLeave;
+  leaveBtn.classList.toggle('disabled-btn', isOwnerCantLeave);
+  leaveBtn.title = isOwnerCantLeave ? 'Вы не можете покинуть группу, пока в ней есть участники' : '';
 
   document.querySelectorAll('.gpTab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'members'));
   renderGroupTab('members');
