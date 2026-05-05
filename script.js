@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
 const { Server } = require('socket.io');
 const {
   db, getUserByPhone, getUserById, getUserByUsername, isUsernameAvailable, searchUsersByUsername,
@@ -34,6 +35,12 @@ const UPLOAD_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 const BG_DIR = path.join(__dirname, 'bg');
 if (!fs.existsSync(BG_DIR)) fs.mkdirSync(BG_DIR, { recursive: true });
+// Инициализация Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const uploadMw = multer({
   storage: multer.diskStorage({
@@ -97,6 +104,22 @@ function sysMsgText(user, action) {
   const name = (user.name || user.username || 'Участник').slice(0, 32);
   const username = user.username || '';
   return `__LINK__${username}|${name}__ ${action}`;
+}
+async function uploadToCloudinary(filePath, folderName = 'messenger') {
+  try {
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: folderName,
+      resource_type: 'auto',
+    });
+    // Удаляем временный файл с диска после загрузки в облако
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    return result.secure_url;
+  } catch (err) {
+    console.error('Ошибка загрузки в Cloudinary:', err);
+    throw err;
+  }
 }
 function requireAuth(req, res, next) {
   const session = sessions.get(getToken(req));
@@ -205,21 +228,31 @@ app.post('/api/me/update', requireAuth, (req, res) => {
 });
 
 // ── Upload ────────────────────────────────────────────────────────────────────
-app.post('/api/upload', requireAuth, uploadMw.single('file'), (req, res) => {
+app.post('/api/upload', requireAuth, uploadMw.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ ok:false, error:'no_file' });
-  return res.json({ ok:true, file: {
-    url: '/uploads/' + req.file.filename,
-    name: req.file.originalname,
-    size: req.file.size,
-    mime: req.file.mimetype || 'application/octet-stream',
-  }});
+  try {
+    const url = await uploadToCloudinary(req.file.path);
+    return res.json({ ok:true, file: {
+      url: url,
+      name: req.file.originalname,
+      size: req.file.size,
+      mime: req.file.mimetype || 'application/octet-stream',
+    }});
+  } catch (e) {
+    return res.status(500).json({ ok:false, error:'upload_failed' });
+  }
 });
 
-app.post('/api/upload/preauth', uploadMw.single('file'), (req, res) => {
+app.post('/api/upload/preauth', uploadMw.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ ok:false, error:'no_file' });
   const mime = req.file.mimetype || '';
   if (!mime.startsWith('image/')) return res.status(400).json({ ok:false, error:'images_only' });
-  return res.json({ ok:true, url: '/uploads/' + req.file.filename });
+  try {
+    const url = await uploadToCloudinary(req.file.path);
+    return res.json({ ok:true, url });
+  } catch (e) {
+    return res.status(500).json({ ok:false, error:'upload_failed' });
+  }
 });
 
 // ── Contacts ──────────────────────────────────────────────────────────────────
@@ -360,12 +393,18 @@ app.get('/api/groups', requireAuth, (req, res) => {
   return res.json({ ok:true, groups: groups.map(g => ({ ...g, chatType:'group' })) });
 });
 
-app.post('/api/groups/create', requireAuth, uploadMw.single('avatar'), (req, res) => {
-  const name = String(req.body?.name||'').trim().slice(0,64);
-  const description = String(req.body?.description||'').trim().slice(0,256);
-  if (!name) return res.status(400).json({ ok:false, error:'name_required' });
-  let avatar = null;
-  if (req.file) avatar = '/uploads/' + req.file.filename;
+  app.post('/api/groups/create', requireAuth, uploadMw.single('avatar'), async (req, res) => {
+    const name = String(req.body?.name||'').trim().slice(0,64);
+    const description = String(req.body?.description||'').trim().slice(0,256);
+    if (!name) return res.status(400).json({ ok:false, error:'name_required' });
+    let avatar = null;
+    if (req.file) {
+      try {
+        avatar = await uploadToCloudinary(req.file.path);
+      } catch (e) {
+        return res.status(500).json({ ok:false, error:'upload_failed' });
+      }
+    }
   const group = createGroup({ name, description, avatar, creatorId: req.user.id });
   const memberIds = JSON.parse(req.body?.memberIds || '[]');
   for (const uid of memberIds) {
@@ -390,17 +429,27 @@ app.get('/api/groups/:id', requireAuth, (req, res) => {
   return res.json({ ok:true, group, members: members.map(pubMember), myRole: member.role });
 });
 
-app.put('/api/groups/:id', requireAuth, uploadMw.single('avatar'), (req, res) => {
+app.put('/api/groups/:id', requireAuth, uploadMw.single('avatar'), async (req, res) => {
   const groupId = Number(req.params.id);
   const member = getGroupMember(groupId, req.user.id);
   if (!member) return res.status(403).json({ ok:false, error:'not_member' });
   if (member.role !== 'owner' && member.role !== 'admin')
     return res.status(403).json({ ok:false, error:'forbidden' });
+
   const patch = {};
   if (req.body?.name) patch.name = String(req.body.name).trim().slice(0,64);
   if ('description' in (req.body||{})) patch.description = String(req.body.description||'').trim().slice(0,256);
-  if (req.file) patch.avatar = '/uploads/' + req.file.filename;
+
+  if (req.file) {
+    try {
+      patch.avatar = await uploadToCloudinary(req.file.path);
+    } catch (e) {
+      return res.status(500).json({ ok:false, error:'upload_failed' });
+    }
+  }
+
   if (!Object.keys(patch).length) return res.json({ ok:true, group: getGroupById(groupId) });
+
   const group = updateGroup({ id: groupId, ...patch });
   const members = listGroupMembers(groupId);
   for (const m of members) io.to(`user:${m.id}`).emit('group:updated', { groupId, group });
@@ -511,7 +560,6 @@ app.post('/api/groups/:id/leave', requireAuth, (req, res) => {
   io.to(`user:${me.id}`).emit('group:left', { groupId });
   return res.json({ ok:true });
 });
-
 
 app.post('/api/groups/:id/clear-me', requireAuth, (req, res) => {
   const groupId = Number(req.params.id);
