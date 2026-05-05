@@ -308,7 +308,9 @@ body {
   overflow-y: auto; flex: 1;
   display: flex; flex-direction: column; gap: 4px;
   background-image: url('/bg/chat.jpg');
-  background-size: cover; background-position: center;
+  background-size: 100% auto;       /* Растягивает по ширине, сохраняя пропорции высоты */
+  background-position: top center;  /* Начинает сверху по центру */
+  background-repeat: repeat-y;      /* Дублирует только по вертикали */
   background-attachment: local;
 }
 .row { display: flex; flex-direction: column; }
