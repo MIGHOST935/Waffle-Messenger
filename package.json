@@ -15,7 +15,7 @@
     "better-sqlite3": "^12.9.0",
     "express": "^5.2.1",
     "multer": "^2.1.1",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
     "cloudinary": "^2.5.1"
   }
 }
