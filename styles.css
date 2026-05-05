@@ -131,7 +131,7 @@ body {
 /* Registration avatar */
 .regAvatarSection { display: flex; align-items: flex-start; gap: 14px; }
 .regAvPreview {
-  width: 72px; height: 72px; border-radius: 20px;
+  width: 72px; height: 72px; border-radius: 50%;
   border: 2px solid var(--border);
   background: rgba(200,180,140,0.3);
   flex-shrink: 0; cursor: pointer;
@@ -142,7 +142,7 @@ body {
 
 .avatarGrid { display: grid; grid-template-columns: repeat(6,1fr); gap: 8px; }
 .avatar {
-  width: 42px; height: 42px; border-radius: 14px;
+  width: 42px; height: 42px; border-radius: 50%;
   border: 2.5px solid transparent; cursor: pointer; padding: 0;
   transition: transform .1s, border-color .15s;
 }
@@ -276,7 +276,7 @@ body {
 
 /* ── Mini avatar ─────────────────────────── */
 .miniAvatar {
-  width: 40px; height: 40px; border-radius: 14px;
+  width: 40px; height: 40px; border-radius: 50%;
   background: rgba(200,180,140,0.4); flex-shrink: 0;
   border: 1px solid var(--border);
 }
@@ -511,7 +511,7 @@ body {
   padding: 20px 24px 16px; gap: 8px;
 }
 .ppAvatar {
-  width: 96px; height: 96px; border-radius: 28px;
+  width: 96px; height: 96px; border-radius: 50%;
   border: 2px solid var(--border);
   background: rgba(200,180,140,0.3);
   box-shadow: 0 4px 16px rgba(120,80,20,0.12);
@@ -667,7 +667,7 @@ body {
   margin: 14px 0;
 }
 .bigAvatar {
-  width: 80px; height: 80px; border-radius: 24px;
+  width: 80px; height: 80px; border-radius: 50%;
   border: 1.5px solid var(--border);
   background: rgba(200,180,140,0.3);
 }
