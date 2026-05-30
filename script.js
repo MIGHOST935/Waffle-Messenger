@@ -238,7 +238,8 @@ app.post('/api/auth/verify', (req, res) => {
   }
   const token = crypto.randomBytes(24).toString('hex');
   sessions.set(token, { phone, createdAt: Date.now() });
-  res.setHeader('Set-Cookie', `session=${encodeURIComponent(token)}; Path=/; SameSite=Lax; Max-Age=31536000;`);
+  res.setHeader('Set-Cookie', `session=${encodeURIComponent(token)}; Path=/; Max-Age=31536000; SameSite=Lax;`);
+
   return res.json({ ok:true, token, phone, user: pub(user) });
 });
 
