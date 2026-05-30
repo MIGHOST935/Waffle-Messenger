@@ -69,7 +69,47 @@ app.get('/:file', (req, res, next) => {
 });
 
 const pendingCodes = new Map();
-const sessions = new Map();
+// Папка и путь для сохранения сессий в файл
+const SESSIONS_FILE = path.join(__dirname, 'uploads', 'sessions.json');
+let sessions = new Map();
+
+// Загружаем сохраненные сессии при старте сервера
+if (fs.existsSync(SESSIONS_FILE)) {
+  try {
+    const rawData = fs.readFileSync(SESSIONS_FILE, 'utf8');
+    sessions = new Map(JSON.parse(rawData));
+    console.log(`[Sessions] Успешно загружено сессий из файла: ${sessions.size}`);
+  } catch (err) {
+    console.error('Ошибка чтения файла сессий:', err);
+  }
+}
+
+// Функция для безопасного сохранения сессий в файл
+function saveSessionsToFile() {
+  try {
+    const rawData = JSON.stringify(Array.from(sessions.entries()));
+    fs.writeFileSync(SESSIONS_FILE, rawData, 'utf8');
+  } catch (err) {
+    console.error('Ошибка записи файла сессий:', err);
+  }
+}
+
+// Перехватываем стандартный метод Map.set, чтобы автоматически сохранять изменения на диск
+const originalSet = sessions.set.bind(sessions);
+sessions.set = function(key, value) {
+  const result = originalSet(key, value);
+  saveSessionsToFile();
+  return result;
+};
+
+// Перехватываем метод Map.delete для удаления сессий при выходе
+const originalDelete = sessions.delete.bind(sessions);
+sessions.delete = function(key) {
+  const result = originalDelete(key);
+  saveSessionsToFile();
+  return result;
+};
+
 const DEFAULT_REGISTER_CODE = '935935';
 
 function normalizePhone(raw) {
