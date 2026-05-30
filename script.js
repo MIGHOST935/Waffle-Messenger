@@ -1,5 +1,9 @@
+'use strict';
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -121,6 +125,25 @@ async function uploadToCloudinary(filePath, folderName = 'messenger') {
     throw err;
   }
 }
+function sendNtfyNotification(topic, message, title) {
+  try {
+    const base64Title = Buffer.from(title).toString('base64');
+    const req = https.request({
+      hostname: 'ntfy.sh',
+      port: 443,
+      path: `/${topic}`,
+      method: 'POST',
+      headers: { 
+        'X-Title': `=?UTF-8?B?${base64Title}?=`,
+        'Content-Type': 'text/plain; charset=utf-8'
+      }
+    });
+    req.on('error', e => console.error('ntfy error:', e));
+    req.write(Buffer.from(message, 'utf-8'));
+    req.end();
+  } catch (e) { console.error('ntfy failed:', e); }
+}
+
 function requireAuth(req, res, next) {
   const session = sessions.get(getToken(req));
   if (!session) return res.status(401).json({ ok:false, error:'unauthorized' });
@@ -656,6 +679,12 @@ io.on('connection', (socket) => {
     const payload = { id: saved.id, from: pub(me), to: pub(other), text: saved.text, attachments: saved.attachments, ts: saved.ts, reactions: [] };
     io.to(`user:${me.id}`).emit('dm:new', payload);
     io.to(`user:${other.id}`).emit('dm:new', payload);
+
+    // NTFY notification
+    const topic = `waffle-messenger-ilamatveev-alerts-${other.username}`;
+    const title = `Новое сообщение от ${me.name || me.username}`;
+    const message = msgText || (atts.length > 0 ? 'Вложение' : 'Пустое сообщение');
+    sendNtfyNotification(topic, message, title);
   });
 
   socket.on('group:send', ({ groupId, text, attachments }) => {
@@ -667,8 +696,21 @@ io.on('connection', (socket) => {
     if (!member) return;
     const saved = sendGroupMessage({ groupId: gid, senderId: me.id, text: msgText, attachments: atts });
     const members = listGroupMembers(gid);
+    const group = getGroupById(gid);
     const payload = { id: saved.id, groupId: gid, senderUserId: me.id, from: pub(me), text: saved.text, attachments: saved.attachments, ts: saved.ts, reactions: [], isSystem: false };
-    for (const m of members) io.to(`user:${m.id}`).emit('group:new', payload);
+    
+    const title = `Новое сообщение в "${group.name}" от ${me.name || me.username}`;
+    const message = msgText || (atts.length > 0 ? 'Вложение' : 'Пустое сообщение');
+
+    for (const m of members) {
+      io.to(`user:${m.id}`).emit('group:new', payload);
+      if (m.id !== me.id) {
+        const topic = `waffle-messenger-ilamatveev-alerts-${m.username}`;
+        setImmediate(() => {
+            sendNtfyNotification(topic, message, title);
+        });
+      }
+    }
   });
 });
 
