@@ -68,60 +68,52 @@ app.get('/:file', (req, res, next) => {
   res.sendFile(path.join(__dirname, req.params.file));
 });
 
-// 1. Инициализация клиента Supabase
-const { createClient } = require('@supabase/supabase-js');
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
 
-// 2. Локальный кэш сессий в оперативной памяти сервера
+
+
+const pendingCodes = new Map();
+// Папка и путь для сохранения сессий в файл
+const SESSIONS_FILE = path.join(__dirname, 'uploads', 'sessions.json');
 let sessions = new Map();
 
-// 3. Загрузка сессий из Supabase при каждом старте/перезапуске Render
-async function syncSessionsFromSupabase() {
-  try {
-    const { data, error } = await supabase.from('waffle_sessions').select('*');
-    if (error) {
-      console.error('[Supabase] Ошибка чтения таблицы сессий:', error);
-      return;
-    }
-    if (data) {
-      data.forEach(row => {
-        sessions.set(row.token, JSON.parse(row.session_data));
-      });
-      console.log(`[Supabase] Сессии синхронизированы! Успешно загружено в память: ${sessions.size}`);
-    }
-  } catch (err) {
-    console.error('[Supabase] Критическая ошибка синхронизации:', err);
+// Загружаем сохраненные сессии при старте сервера
+if (fs.existsSync(SESSIONS_FILE)) {
+try {
+  const rawData = fs.readFileSync(SESSIONS_FILE, 'utf8');
+  sessions = new Map(JSON.parse(rawData));
+  console.log(`[Sessions] Успешно загружено сессий из файла: ${sessions.size}`);
+} catch (err) {
+  console.error('Ошибка чтения файла сессий:', err);
   }
 }
 
-// Запускаем выкачивание сессий при включении сервера Render
-syncSessionsFromSupabase();
-
-// 4. Перехватываем методы сохранения, чтобы дублировать токены в облако Supabase
+// Функция для безопасного сохранения сессий в файл
+function saveSessionsToFile() {
+  try {
+    const rawData = JSON.stringify(Array.from(sessions.entries()));
+    fs.writeFileSync(SESSIONS_FILE, rawData, 'utf8');
+  } catch (err) {
+    console.error('Ошибка записи файла сессий:', err);
+  }
+}
 const originalSet = sessions.set.bind(sessions);
 sessions.set = function(key, value) {
   const result = originalSet(key, value);
-  
-  // Асинхронно записываем/обновляем сессию в Supabase
-  supabase.from('waffle_sessions')
-    .upsert({ token: key, session_data: JSON.stringify(value) })
-    .then(({ error }) => { if (error) console.error('[Supabase] Ошибка upsert:', error); });
-
+  saveSessionsToFile();
   return result;
 };
 
-// Перехватываем метод удаления (на случай, если пользователь нажмет "Выйти")
+// Перехватываем метод Map.delete для удаления сессий при выходе
 const originalDelete = sessions.delete.bind(sessions);
 sessions.delete = function(key) {
   const result = originalDelete(key);
-  
-  supabase.from('waffle_sessions')
-    .delete()
-    .eq('token', key)
-    .then(({ error }) => { if (error) console.error('[Supabase] Ошибка удаления сессии:', error); });
-
+  saveSessionsToFile();
   return result;
 };
+
+
+
+
 
 
 const DEFAULT_REGISTER_CODE = '935935';
