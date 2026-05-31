@@ -17,6 +17,7 @@
     "multer": "^2.1.1",
     "socket.io": "^4.8.3",
     "cloudinary": "^2.5.1",
-    "dotenv": "^16.4.5" 
+    "dotenv": "^16.4.5",
+    "@supabase/supabase-js": "^2.43.4"
   }
 }
